@@ -1,0 +1,210 @@
+\input plain
+
+%% Justin Bailey 2011
+%%
+%% To use: surround paragraphs to place a rule
+%% with \startrule and \endrule.
+%%
+%% E.g.:
+%%
+%% \startrule 
+%% This paragraph will have a rule around it.
+%% \endrule
+%%
+%% Multiple paragraphs can be spanned as well.
+
+\newbox\parbox %% Holds our collected paragraph
+\newdimen\startpar %% Where the paragraph started
+\newdimen\endpar  %% Where the paragraph ended
+\newdimen\leftoffset %% For calculating offset from left margin.
+\newtoks\savedout \savedout=\output %% Previous output routine
+\newif\ifmeasureing %% Flag to indicate if a paragraph got broken in 
+                    %% the middile of a rule
+
+%% Capture all paragraphs in an \hbox so we can keep 
+%% track of their height. 
+\def\startrule{\startpar=\pagetotal %% Record where we started
+  \measureingtrue%%
+  \setbox\parbox=\hbox\bgroup %% Begin capturing
+  \let\par=\parrule %% Need to take special action when paragraph ends before \endrule
+}
+
+%% Replacement for \par that updates our \endpar counter and continues
+%% capturing.
+\def\parrule{\egroup\unhbox\parbox\par\endpar=\pagetotal%%
+  \setbox\parbox=\hbox\bgroup\let\par=\parrule}
+
+%% Insert a rule from the top of the paragraph to the end. If
+%% the paragraph started on the previous page this will put a
+%% rule only on the bottom portion.
+\def\endrule{\egroup%%
+  \unhbox\parbox\par %% Insert captured text plus \par that was gobbled
+  \endpar=\pagetotal %% Record where we are. Output routine might have run!
+  \measureingfalse %% Flip flag since output routine won't run anymore.
+  \dimen0=\endpar \advance\dimen0 by -1ex %% Make the rule start in the 
+    %% middle of the first line, extending to the middle of the last line.
+  \ifnum\startpar>\endpar %% Test if \startpar was on the previous page.
+  \else\advance\dimen0 by -\startpar%%
+  \fi\makerule\dimen0/}
+
+%% An output routine that handles breaking rules across
+%% page boundaries. After adding a rule, runs the default (or prior)
+%% output routine. 
+\def\lastrule{
+  \ifmeasureing %% True when output called between \startrule and \endrule.
+    \dimen0=\pagegoal %% Draw rule to bottom of page (should account for 
+                      %% page #'s and footnotes.
+    \ifnum\startpar<\dimen0 %%
+    \setbox255=\vbox{\unvbox255 %% Unbox page body
+      \advance\dimen0 by -\startpar \advance\dimen0 by -\baselineskip%%
+      \makerule\dimen0/}
+  \fi\fi%%
+  %% Run previous output routine.
+  \the\savedout}
+
+\output={\lastrule} %% Use our custom output routine.
+
+%% Handles drawing the rule, using the height given in the dimension
+%% register passed. Notice the slash used to delimit the
+%% argument. Used internally by macros above
+\def\makerule#1/{
+  \edef\theprevdepth{\the\prevdepth}%% Keep prevdepth so interline spacing
+    %% isn't affected by our vbox
+    %% (from http://tex.stackexchange.com/questions/22355/make-an-invisible-vbox)
+  \nointerlineskip%% No glue between previous vbox and this
+  \vbox to 0pt{\hrule height 0pt\vskip -#1 %% \hrule ensures reference 
+                                           %% point is at the top of the box.
+        \hbox to 0pt{%% This box contains the rule of the given height, offset -10pt 
+                     %% into the left margin.
+          \leftoffset=\leftskip \advance\leftoffset by -10pt%%
+          \kern\leftoffset \vrule height#1 depth-1ex width1pt%%
+          %% \hss removes an underfull warning
+          \hss}}%%
+  %% Restoring prevdepth ensures next paragraph
+  %% is spaced correctly from previous one.
+  \prevdepth=\theprevdepth}
+
+\startrule 
+asdljflasd dasjfdlf lasdfdflaslfjlsadf sajf lsdfas Lorem ipsum dolor
+sit amet, consectetur adipiscing elit. Quisque sollicitudin pretium
+quam, id condimentum felis rutrum quis. Nullam venenatis libero ac
+ante blandit euismod. Suspendisse sit amet nisl vel leo feugiat
+rutrum. Fusce vestibulum ornare lorem in fermentum. Sed et facilisis
+massa. Vivamus non leo quis magna egestas volutpat hendrerit a
+libero. Morbi interdum lacus sit amet ligula suscipit et tempor enim
+varius. Sed vel erat massa, a vehicula ligula. Proin felis eros,
+feugiat non fermentum ac, volutpat vel metus. Nunc tortor enim,
+aliquet id feugiat sed, auctor a elit. Phasellus in tortor diam, in
+vestibulum enim. Phasellus imperdiet semper tellus, ac malesuada lacus
+scelerisque eget. Quisque consectetur volutpat est, nec lobortis diam
+ullamcorper vitae. In vulputate nulla eu odio congue posuere.
+
+In hac habitasse platea dictumst. Etiam rutrum blandit velit sed
+rutrum. Curabitur rhoncus erat a turpis suscipit vitae rutrum turpis
+sodales. Cras viverra, arcu nec euismod eleifend, leo leo posuere
+lectus, non varius velit nisi vitae turpis. Proin faucibus erat id
+velit scelerisque tristique. Integer sit amet nisl nulla. Phasellus
+commodo orci vitae nulla consectetur interdum. Cum sociis natoque
+penatibus et magnis dis parturient montes, nascetur ridiculus
+mus. Vivamus vitae urna at tortor fringilla suscipit id a augue. Morbi
+tristique, mi in pharetra congue, nulla eros ullamcorper augue, in
+egestas orci dui eget massa. Morbi id pharetra elit. Duis ornare
+malesuada tempus. Curabitur vehicula vulputate lorem a accumsan. In
+hac habitasse platea dictumst. Nunc lectus tortor, porttitor at ornare
+vel, sodales vel dolor.
+\endrule
+
+\startrule
+Etiam placerat leo sit amet felis dictum vitae consequat metus
+dictum. Nam volutpat enim eu justo imperdiet sit amet ultrices ipsum
+rutrum. Nam quis ligula ac leo consectetur suscipit sit amet et
+augue. Vivamus vehicula imperdiet commodo. Morbi ac nibh in magna
+sagittis lobortis eget quis orci. Maecenas placerat euismod mi et
+dictum. Vestibulum in diam risus, eget porta mi. Duis placerat aliquam
+tempor. Mauris feugiat, risus at posuere luctus, leo enim vestibulum
+sem, eget egestas urna nisi iaculis lectus. Proin eget purus ac quam
+pulvinar dignissim. In viverra faucibus orci, vel cursus tellus
+viverra at.
+\endrule
+
+sdfdasfasfsa sdafsaff asdfsafsaf
+
+\startrule\obeylines\raggedright\parindent=0pt %%
+Integer blandit lorem non magna tincidunt tempus. Donec quis quam non
+urna imperdiet porta. Aenean auctor eros quis neque dictum pulvinar
+
+dignissim. Integer euismod, nulla ac tincidunt mollis, est lorem
+
+volutpat. Donec dui sem, feugiat vulputate gravida ut, sollicitudin
+non mauris. In gravida arcu sit amet felis vestibulum placerat.
+\endrule
+
+Nam sed massa in velit cursus faucibus a in felis. Nunc a convallis
+mi. Sed vitae consequat diam. Vivamus semper lectus leo. Maecenas elit
+lorem, suscipit vitae vestibulum ac, adipiscing id magna. Aliquam ut
+nisl orci. Morbi dapibus iaculis sem ut pharetra. Duis augue metus,
+consectetur eu aliquam vel, tincidunt quis risus. Proin a consectetur
+sem. Integer dolor nulla, mollis quis cursus vitae, vehicula at
+est. Nulla facilisi. Fusce malesuada elit vel enim tincidunt
+laoreet. Suspendisse sed ante augue. Curabitur a metus odio, a
+interdum purus. Fusce ullamcorper augue accumsan nisi luctus id
+sodales quam rhoncus.
+
+\startrule
+Vestibulum lacus orci, hendrerit eget rutrum sed, pharetra nec
+tellus. Sed risus turpis, pretium ac condimentum id, pharetra et
+nisl. Sed auctor ipsum et tortor eleifend facilisis. Nulla vel erat
+nulla, eu ullamcorper mi. Nullam dapibus neque arcu, nec consectetur
+leo. Vestibulum et est ut sapien laoreet facilisis. Ut bibendum sapien
+et arcu congue ac venenatis justo cursus. Nunc laoreet leo sit amet
+odio sagittis malesuada. Fusce eu odio justo. Morbi tempor luctus
+elit, in rhoncus justo gravida a. Quisque ornare tristique neque et
+venenatis. Ut volutpat ultricies est id egestas.
+\endrule
+
+\startrule
+Morbi luctus lacinia lectus, in pretium sem sollicitudin
+nec. Pellentesque habitant morbi tristique senectus et netus et
+malesuada fames ac turpis egestas. Proin ut sodales eros. Donec tortor
+sapien, posuere et interdum ac, laoreet at nunc. In sit amet libero
+eget justo lobortis rutrum a lobortis massa. Aliquam et eros
+leo. Fusce in libero id purus consectetur mattis sodales sit amet
+lectus. Pellentesque id quam eget diam suscipit viverra. Cum sociis
+natoque penatibus et magnis dis parturient montes, nascetur ridiculus
+mus. Sed faucibus accumsan tellus, vel sodales magna fermentum
+sed. Nam egestas mi et justo luctus non dictum odio aliquam.
+
+Cras vel tortor lorem. Curabitur enim ligula, ullamcorper at eleifend
+a, aliquet quis tortor. Pellentesque aliquam, nisl sed consectetur
+pulvinar, purus augue aliquam tortor, vitae ornare sem magna vitae
+augue. Suspendisse magna eros, sollicitudin ac consequat sed, pulvinar
+sed turpis. Nulla neque orci, eleifend a placerat at, imperdiet a
+nunc. Nulla malesuada eros id ante accumsan feugiat. Nunc tortor
+neque, pretium in egestas quis, semper ac neque. Cras ut leo vitae
+arcu aliquam mattis a et erat. Maecenas consequat, mauris quis
+pulvinar eleifend, est urna varius eros, quis aliquam risus orci
+accumsan urna. Pellentesque habitant morbi tristique senectus et netus
+et malesuada fames ac turpis egestas. Mauris varius eleifend elit quis
+adipiscing. In urna justo, lacinia quis venenatis eget, pulvinar quis
+magna. Curabitur neque libero, vestibulum non eleifend a, venenatis
+vitae lectus. Cum sociis natoque penatibus et magnis dis parturient
+montes, nascetur ridiculus mus.
+\endrule
+
+\narrower
+
+\startrule
+Morbi luctus lacinia lectus, in pretium sem sollicitudin
+nec. Pellentesque habitant morbi tristique senectus et netus et
+malesuada fames ac turpis egestas. Proin ut sodales eros. Donec tortor
+sapien, posuere et interdum ac, laoreet at nunc. In sit amet libero
+eget justo lobortis rutrum a lobortis massa. Aliquam et eros
+leo. Fusce in libero id purus consectetur mattis sodales sit amet
+lectus. Pellentesque id quam eget diam suscipit viverra. Cum sociis
+natoque penatibus et magnis dis parturient montes, nascetur ridiculus
+mus. Sed faucibus accumsan tellus, vel sodales magna fermentum
+sed. Nam egestas mi et justo luctus non dictum odio aliquam.
+\endrule
+
+
+\bye
