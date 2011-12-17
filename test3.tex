@@ -1,0 +1,47 @@
+\input vert
+\showboxbreadth=1000 \showboxdepth=2
+{\tt Normal paragraph.} In hac habitasse platea dictumst. Etiam rutrum blandit velit sed
+rutrum. Curabitur rhoncus erat a turpis suscipit vitae rutrum turpis
+sodales.
+
+{\tt Normal paragraph.} Etiam rutrum blandit velit sed
+rutrum. Curabitur rhoncus erat a turpis suscipit vitae rutrum turpis
+sodales.
+
+%% No indent honored
+\startrule\noindent {\bf Space between this paragraph and previous looks
+right; no indentation.} In hac habitasse platea dictumst. Etiam rutrum
+blandit velit sed rutrum. Curabitur rhoncus erat a turpis suscipit
+vitae rutrum turpis sodales.  \endrule
+
+%% Inter-paragraph spacing correct
+\startrule {\sl Space between this paragraph and previous looks right.} In
+hac habitasse platea dictumst. Etiam rutrum blandit velit sed
+rutrum. Curabitur rhoncus erat a turpis suscipit vitae rutrum turpis
+sodales.  
+\endrule\tracingcommands=0\tracingmacros=0
+
+%% Inter-paragraph spacing correct
+\startrule\noindent {\it Space between this paragraph and previous looks right; no indentation.}
+In hac habitasse platea dictumst. Etiam rutrum blandit velit sed
+rutrum. Curabitur rhoncus erat a turpis suscipit vitae rutrum turpis
+sodales.
+\endrule
+
+%% Inter-paragraph
+{\it Space between this paragraph and previous looks right.} In hac habitasse platea dictumst. Etiam rutrum blandit velit sed
+rutrum. Curabitur rhoncus erat a turpis suscipit vitae rutrum turpis
+sodales.
+
+\startrule {\bf This rule spans multiple paragraphs}. In hac habitasse
+platea dictumst. Etiam rutrum blandit velit sed rutrum. Curabitur
+rhoncus erat a turpis suscipit vitae rutrum turpis sodales. Space
+between this paragraph and previous looks right.
+
+In hac habitasse platea dictumst. Etiam rutrum blandit velit sed
+rutrum. Curabitur rhoncus erat a turpis suscipit vitae rutrum turpis
+sodales. Space between this paragraph and previous looks right. 
+\endrule
+
+\bye
+
