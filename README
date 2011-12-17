@@ -1,0 +1,27 @@
+Justin Bailey 2011
+jgbailey@codeslower.com
+
+To use: surround paragraphs to place a rule
+with \startrule and \endrule.
+
+E.g.:
+
+\startrule 
+This paragraph will have a rule around it.
+\endrule
+
+Multiple paragraphs can be spanned as well. Rules will break across
+pages but it will have the effect of making your document
+\raggedbottom. 
+
+You can change the offset of the rule by setting \ruleoffset. Rules
+are always offset from the left margin.
+
+A simple \codeblock environment is included too.
+
+To use it, surround the code with \codeblock{
+
+}
+
+Code must appear in the group. The group must immediately follow \codeblock.
+Code is set ragged right, obeying newlines, using typewriter font.
