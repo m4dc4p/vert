@@ -11,8 +11,8 @@
 %% \endrule
 %%
 %% Multiple paragraphs can be spanned as well. Rules will break across
-%% pages but it will have the effect of making your document
-%% \raggedbottom. 
+%% pages. Unfortunately, glue between paragraphs will not stretch
+%% in that case, but usually it's not noticeable.
 %%
 %% You can change the offset of the rule by setting \ruleoffset. Rules
 %% are always offset from the left margin.
@@ -26,120 +26,57 @@
 %% Code must appear in the group. The group must immediately follow \codeblock.
 %% Code is set ragged right, obeying newlines, using typewriter font.
 
-\newdimen\ruleoffset \ruleoffset=-2pt %% Horizontal offset for the
+\newdimen\ruleoffset \ruleoffset=-10pt %% Horizontal offset for the
                                   %% rule. This is the parameter that
                                   %% should be set by the user.
 
-\newbox\parbox %% Holds our collected paragraph
-\newdimen\startpar \startpar=-1000pt %% Where the paragraph started
-\newdimen\endpar  \endpar=0pt %% Where the paragraph ended
 \newdimen\roffset %% For calculating offset from left margin for rule.
-\newtoks\savedout \savedout=\output %% Previous output routine
-\newdimen\interparskip
+\newbox\savedbox \newif\ifoutputran \newbox\rulebox
+\newdimen\splitheight \newdimen\interparskip
+\newtoks\codetoks
 
-%% A hbox with no width, height or depth. Used to ensure
-%% empty lines have at least one item, which prevents
-%% underfull warnings.
-\newbox\zerobox \setbox\zerobox=\hbox to 0pt{\vrule height0pt width0pt}
-\newbox\charbox \setbox\charbox=\hbox{.}
-
-%% Capture all paragraphs in a \vbox so we can keep 
-%% track of their height. If this macro is not in vertical
-%% mode, it will emit a \par to force vertical mode.
-\def\startrule{\ifvmode\else\par\penalty0\fi%%
-%% Capture value of \ruleoffset so it survives the group. This ensures
-%% that when the output routine calls \makerule we get the right value
+%% The basic idea is to use TeX's output routines
+%% to determine if our ruled box is too high. If so
+%% we split the box, set a rule, and put the rest on 
+%% the next page. \endrule does most of the work.
+\def\startrule{%%
+%% Clear our saved box.
+  \setbox0=\hbox{\box\savedbox}\par%%
+%% Save \ruleoffset for later use.
   \xdef\setroffset{\roffset=\the\leftskip \advance\roffset by \the\ruleoffset}%%
+%% Save \prevdepth so we can use it to calculate interparagraph
+%% glue.
   \xdef\theprevdepth{\the\prevdepth}%%
-  \startpar=\pagetotal \endpar=-1000pt%% Sentinel value.
-  \setbox\parbox=\vbox\bgroup}
-
-%% Insert a rule from the top of the paragraph to the end. If
-%% the paragraph started on the previous page this will put a
-%% rule only on the bottom portion.
-\def\endrule{\egroup
-  %% Do not calculated inter-paragraph glue if
-  %% nothing exists on the page yet.
-  \if\pagegoal=\maxdimen\relax\else%%
-%% Calculate inter-paragraph glue by setting captured text
-%% ourselves. We know the heights of everythign but the glue. Use
-%% \vtop in boht cases so height of box is only the first line, not
-%% the entire box.
-    \setbox2=\vtop{X\par}%%
-    \setbox4=\vtop{\unvcopy\parbox}%% 
-%% Set \prevdepth so inter-paragraph glue is calculated based
-%% on the paragraph that really preceded \startrule, not our
-%% fake paragraph.
-    \setbox0=\vbox{\copy2\par\prevdepth=\theprevdepth\copy4}%%
-    \interparskip=\ht0 \advance\interparskip by -\ht4 \advance\interparskip by -\ht2%%
-%% Add \penalty so \output routine triggers if necessary.
-    \vskip\interparskip\par\penalty0%% 
-  \fi%%
-  \ifnum\startpar>-1000\relax%% A page break occurred when startpar = -1000.
-%% \pagetotal represents where our paragraph will start. 
-    \startpar=\pagetotal%%
-  \fi%%
-%% Add \penalty below so \output will run if necessary.
-  \unvbox\parbox\par\penalty0%%
-  \xdef\theprevdepth{\the\prevdepth}%%
-  \endpar=\pagetotal%% Record where we are. 
-%% Make the rule start at the top of the first line, extending to
-%% the bottom of the last line.
-  \if\endpar>\pagegoal%%
-    \dimen0=\pagegoal%%
-  \else%%
-    \dimen0=\endpar%% 
-  \fi%%
-  \ifnum\startpar>-1000\relax%% when true, rule starts at top of page.
-%% Otherwise, \startpar in middle of page, \endpar also in middle
-    \advance\startpar by -\pagedepth%%
-    \advance\dimen0 by -\startpar%%
-  \fi%%
-  \makerule\dimen0/%%    
-  \endpar=0pt%% Prevents \lastrule from drawing a rule
-  \startpar=-1000pt%%
-  \prevdepth=\theprevdepth}
-
-%% An output routine that handles breaking rules across
-%% page boundaries. After adding a rule, runs the default (or prior)
-%% output routine. 
-\def\lastrule{%%
-  \ifnum\endpar<0\relax%
-%% Any glue in box255 will screw up \startpar - the paragraph might
-%% have moved since we recorded its position. Therefore, we reset the
-%% box to its natural height and put all the stretching at the
-%% bottom. 
-    \setbox0=\vbox{\unvcopy255} \dimen0=\ht0%%
-    \ifnum\startpar>-1000\relax%%
-    %% \startpar in middle of page, \endpar at bottom.
-      \advance\startpar by -\dp0%% Make sure rule covers the entire paragraph.
-      \advance\dimen0 by -\startpar%%
-      \wlog{output: dimen0: \the\dimen0}%%
+%% Save material proceeding \startrule unless we're at
+%% the top of the page.
+  \output={\accum}\ifnum\pagegoal<\maxdimen\relax%%
+  \vfil\break\outputranfalse%%
+%% Capture everything up to \endrule in a \vbox.
+  \fi\setbox\rulebox=\vbox\bgroup}
+\def\endrule{\egroup%%
+%% Test if \rulebox + \savedbox will overflow
+%% the page.
+  \output{\test}%%
+  \setinterparskip\setroffset%%
+  \setbox4=\makerule\copy\rulebox/%%
+%% \vfuzz and \vbadness set to avoid overfull/underfull warnings
+%% while testing.
+  \edef\thevfuzz{\the\vfuzz}\edef\thevbadness{\the\vbadness}%%
+  \vfuzz=10in\box4\penalty0%%
+%% Restore default output routine.
+  \output={\savedout}\vfuzz=\thevfuzz%%
+  \ifoutputran\outputranfalse%%
+%% The material overflowed the page, so we split off what 
+%% can fit (\splitheight) and put that on the page.
+    \vfuzz=10in\vbadness=10000%%
+    \setbox0=\vsplit\rulebox to \splitheight\vbadness=\thevbadness%%
+    \makerule\box0/\break\vfuzz=\thevfuzz%%
+%% Put remaining material in a ruled box unless
+%% nothing was left (\ifvoid)
+    \ifvoid\rulebox%%
+      \else\startrule\unvbox\rulebox\endrule%%
     \fi%%
-    \setbox255=\vbox{\unvbox255\makerule\dimen0/\vfil}%%
-    \global\startpar=-1000pt%%
-  \fi%%
-%% Run previous output routine.
-  \the\savedout%%
-}
-
-%% Handles drawing the rule, using the height given in the dimension
-%% register passed. Notice the slash used to delimit the
-%% argument. Used internally by macros above.
-\def\makerule#1/{%%
-%% Keep prevdepth so interline spacing isn't affected by our vbox
-%% (from
-%% http://tex.stackexchange.com/questions/22355/make-an-invisible-vbox)
-  \nointerlineskip%% No glue between previous vbox and this
-  \nobreak\vbox to 0pt{\hrule height 0pt depth0pt width0pt\vskip -#1%% \hrule ensures reference point is at the top of the box.
-%% This box contains the rule of the given height, offset from the
-%% left margin by \ruleoffset.
-        \hbox to 0pt{\setroffset%%
-%% \hss removes an underfull warning
-          \kern\roffset\vrule height#1 width1pt depth0pt\hss}}%%
-%% Restoring prevdepth ensures next paragraph
-%% is spaced correctly from previous one.
-  \prevdepth=\theprevdepth}
+  \fi}
 
 %% Ensures spaces at the beginning of the line are always
 %% preserved. TABs will not be. Thanks to TeX for the Impatient
@@ -149,7 +86,7 @@
 
 %% Define new lines so that in \codeblock they don't start a new
 %% paragraph - they just insert a line break.
-{\catcode`\^^M=\active \gdef^^M{\copy\zerobox\hfil\break} \global\let\ret=^^M}
+{\catcode`\^^M=\active \gdef^^M{\null\hfil\break} \global\let\ret=^^M}
 
 \newtoks\codetoks
 %% \codeblock must be followed by a group or it has no effect.
@@ -180,5 +117,25 @@
     \fi\the\codetoks}%%
   \ignorespaces\afterassignment\do\let\next= }
 
-\output={\lastrule} %% Use our custom output routine.
+\edef\savedout{\the\output}
+%% Accumulate vertical material into a box.
+\def\accum{\global\setbox\savedbox=\vbox{\unvbox\savedbox\unvbox255\unskip}}
+%% An output routine that tells us it ran and
+%% throws away the page built.
+\def\test{\global\outputrantrue%%
+  \global\splitheight=\vsize%%
+  \global\advance\splitheight by -\ht\savedbox%%
+  \global\advance\splitheight by -\dp\savedbox%%
+  \setbox0=\vbox{\box255}}
+
+\def\makerule#1/{\vbox{\unvcopy\savedbox%%
+    \vskip\interparskip\par\penalty0%%
+    \hbox{\hskip \roffset \vrule \hss \hskip -\roffset \strut#1\strut}}}%%
+\def\setinterparskip{\setbox2=\vtop{X\par}%%
+  \setbox4=\vtop{\unvcopy\rulebox}%% 
+%% Set \prevdepth so inter-paragraph glue is calculated based
+%% on the paragraph that really preceded \startrule, not our
+%% fake paragraph.
+  \setbox0=\vbox{\copy2\par\prevdepth=\theprevdepth\copy4}%%
+  \interparskip=\ht0 \advance\interparskip by -\ht4 \advance\interparskip by -\ht2}%%
 
