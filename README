@@ -11,8 +11,8 @@ This paragraph will have a rule around it.
 \endrule
 
 Multiple paragraphs can be spanned as well. Rules will break across
-pages but it will have the effect of making your document
-\raggedbottom. 
+pages. Unfortunately, glue between paragraphs will not stretch
+in that case, but usually it's not noticeable.
 
 You can change the offset of the rule by setting \ruleoffset. Rules
 are always offset from the left margin.
